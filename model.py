@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
+from torchsummary import summary
 
 #this project folows Aladdin Persson
+
+
 
 architecture_configs = [
     (7, 64, 2, 3), #(kernel_size, no_filters, stride, padding)
@@ -23,7 +26,6 @@ architecture_configs = [
     (3, 1024, 1, 1),
     (3, 1024, 1, 1),
 ]
-
 
 
 class CNNBlock(nn.Module):
@@ -54,7 +56,6 @@ class YOLOV1(nn.Module):
         darknet = self.darknet(x)
         flatten = torch.flatten(darknet,start_dim = 1)
         fully_connected = self.fully_connected(flatten)
-
         return fully_connected
 
     def _create_darknet(self, architecture_config):
@@ -79,16 +80,18 @@ class YOLOV1(nn.Module):
         split_size, boxes, classes = grids, num_boxes, num_classes
         return nn.Sequential(
             nn.Flatten(),
-            nn.Linear(1024*split_size*split_size, 496),
+            nn.Linear(1024*split_size * split_size, 496),
             nn.Dropout(0.0),
             nn.LeakyReLU(0.1),
             nn.Linear(496, split_size * split_size * (boxes * 5 + classes))
         )
 
 
-def test_model(s= 7 , num_boxes = 2 , num_classes = 20):
-    model = YOLOV1( grids=s, num_boxes=num_boxes, num_classes = num_classes,architecture_config= architecture_configs, in_channels=3)
-    x = torch.rand((2,3,448,488))
-    print(model(x).shape)
-
-test_model()
+# def test_model(s= 7 , b = 2 , c = 20):
+#     model = YOLOV1( grids=s, num_boxes=b, num_classes = c,architecture_config= architecture_configs, in_channels=3)
+#     x = torch.rand((8,3,448,448))
+#     out = model(x)
+#     # summary(model, x)
+#     print(out.shape)
+#
+# test_model()

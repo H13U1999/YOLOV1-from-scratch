@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from model import YOLOV1
 from dataset import PascalVOC
-from utils import get_bboxes, plot_image, IOU, NMS, MAP, cellboxes_to_boxes, convert_cellboxes, load_checkpoint, save_checkpoint
+from utils import get_bboxes, IOU, NMS, MAP, cellboxes_to_boxes, convert_cellboxes, load_checkpoint, save_checkpoint
 from loss import Loss
 from torch.utils.data import Dataset, DataLoader
 
@@ -25,6 +25,8 @@ PIN_MEMORY = True
 LOAD_MODEL = False
 LOAD_MODEL_FILE = "overfit.pth.tar"
 NUM_CLASS = 20
+NUM_BOXES = 2
+NUM_GRIDS = 7
 WEIGHT_DECAY = 0
 IMG_DIR = "data/images"
 LABEL_DIR = "data/labels"
@@ -81,7 +83,7 @@ def main():
         (3, 1024, 1, 1),
     ]
 
-    yolov1 = YOLOV1(grids = 7, num_boxes= 2, num_classes=3, architecture_config= architecture_configs).to(DEVICE)
+    yolov1 = YOLOV1(grids = NUM_GRIDS, num_boxes= NUM_BOXES, num_classes=NUM_CLASS, architecture_config= architecture_configs).to(DEVICE)
     optimizer = optim.Adam(yolov1.parameters(), lr=LEARNING_RATE)
     scaler = torch.cuda.amp.GradScaler()
     loss = Loss()
@@ -102,7 +104,7 @@ def main():
     test_loader = DataLoader(test_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = True)
 
     for epoch in range(NUM_EPOCHS):
-        pred_boxes, target_boxes = get_bboxes(train_loader, yolov1, iou_threshold = 0.5, threshold= 0.4)
+        pred_boxes, target_boxes = get_bboxes(train_loader, yolov1, iou_threshold = 0.5, prob_threshold= 0.4)
         mean_avg_pre = MAP(pred_boxes,target_boxes, iou_threshold=0.5, format="midpoints")
         print(f"Train mAP: {mean_avg_pre}")
         train(train_loader,yolov1, optimizer, loss,scaler)

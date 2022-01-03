@@ -18,9 +18,9 @@ class Loss(nn.Module):
         ious = 0
         for _ in range(self.num_boxes):
             if incre == 0:
-                ious = IOU(prediction[:, self.num_classes+1+incre:self.num_class+5+incre], target[..., self.num_classes+1+incre: self.num_class+5+incre]).unsqueeze(0)
+                ious = IOU(prediction[..., self.num_classes+1+incre:self.num_classes+5+incre], target[..., self.num_classes+1+incre: self.num_classes+5+incre]).unsqueeze(0)
             elif incre != 0:
-                bb = IOU(prediction[:, self.num_classes+1+incre:self.num_class+5+incre], target[..., self.num_classes+1+incre: self.num_class+5+incre])
+                bb = IOU(prediction[..., self.num_classes+1+incre:self.num_classes+5+incre], target[..., self.num_classes+1+incre: self.num_classes+5+incre])
                 ious = torch.cat([ious, bb.unsqueeze(0)], dim=0)
             incre += 5
 
