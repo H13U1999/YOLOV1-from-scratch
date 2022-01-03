@@ -40,7 +40,7 @@ class CNNBlock(nn.Module):
         return output
 
 class YOLOV1(nn.Module):
-    def __init__(self, architecture_config, grids, num_boxes, num_classes, in_channels = 3) :
+    def __init__(self,  grids, num_boxes, num_classes, architecture_config, in_channels = 3) :
         super(YOLOV1, self).__init__()
         self.architecture_config = architecture_config
         self.in_channels = in_channels
@@ -87,8 +87,8 @@ class YOLOV1(nn.Module):
 
 
 def test_model(s= 7 , num_boxes = 2 , num_classes = 20):
-    model = YOLOV1(architecture_configs, in_channels=3, s=s, num_boxes=num_boxes, num_classes = num_classes)
-    x = torch.rand((2,3,448,448))
+    model = YOLOV1( grids=s, num_boxes=num_boxes, num_classes = num_classes,architecture_config= architecture_configs, in_channels=3)
+    x = torch.rand((2,3,448,488))
     print(model(x).shape)
 
-# test_model()
+test_model()
