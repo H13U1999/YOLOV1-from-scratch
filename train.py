@@ -27,8 +27,8 @@ NUM_CLASS = 20
 NUM_BOXES = 2
 NUM_GRIDS = 7
 WEIGHT_DECAY = 0
-IMG_DIR = "data/images"
-LABEL_DIR = "data/labels"
+IMG_DIR = "/home/hieu/Documents/Pascal VOC/images"
+LABEL_DIR = "/home/hieu/Documents/Pascal VOC/labels"
 
 class Compose(object):
     def __init__(self,transforms):
@@ -102,13 +102,13 @@ def main():
         load_checkpoint(torch.load(LOAD_MODEL_FILE), yolov1,optimizer)
 
     train_set = PascalVOC("/home/hieu/Documents/Pascal VOC/100examples.csv",
-                          "/home/hieu/Documents/Pascal VOC/images",
-                          "/home/hieu/Documents/Pascal VOC/labels",
+                          IMG_DIR,
+                          LABEL_DIR,
                           transform = transform)
 
     test_set = PascalVOC("/home/hieu/Documents/Pascal VOC/test.csv",
-                          "/home/hieu/Documents/Pascal VOC/images",
-                          "/home/hieu/Documents/Pascal VOC/labels",
+                          IMG_DIR,
+                          LABEL_DIR,
                           transform=transform)
 
     train_loader = DataLoader(train_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = False)
