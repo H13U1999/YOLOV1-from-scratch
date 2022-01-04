@@ -122,6 +122,7 @@ def get_bboxes(
     pred_format="cells",
     format ="midpoints",
     device="cuda",
+    eva = False
 ):
     all_pred_boxes = []
     all_true_boxes = []
@@ -208,7 +209,7 @@ def cellboxes_to_boxes(out, grids=7):
 
     return all_bboxes
 
-def save_checkpoint(state, filename="my_checkpoint.pth.tar"):
+def save_checkpoint(state, filename="yolov1.pth.tar"):
     print("=> Saving checkpoint")
     torch.save(state, filename)
 

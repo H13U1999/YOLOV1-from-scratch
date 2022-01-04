@@ -21,7 +21,8 @@ NUM_EPOCHS = 100
 NUM_WORKERS = 2
 PIN_MEMORY = True
 LOAD_MODEL = False
-LOAD_MODEL_FILE = "overfit.pth.tar"
+LOAD_MODEL_FILE = "yolov1.pth.tar"
+EVALUATION = True
 NUM_CLASS = 20
 NUM_BOXES = 2
 NUM_GRIDS = 7
@@ -62,6 +63,13 @@ def train(train_loader, model, optimizer, loss_fn, scaler):
         loop.set_postfix(loss=loss.item())
 
     print(f"mean loss {sum(running_loss) / len(running_loss)}")
+
+def evaluation(test_loader, model, optimizer, file):
+    load_checkpoint(torch.load(file), model,optimizer)
+    pred_boxes, target_boxes = get_bboxes(test_loader, model, iou_threshold=0.5, prob_threshold=0.4)
+    mean_avg_pre = MAP(pred_boxes, target_boxes, iou_threshold=0.5, format="midpoints")
+    print(f"Evaluation mAP: {mean_avg_pre}")
+
 
 def main():
     architecture_configs = [
@@ -105,14 +113,24 @@ def main():
 
     train_loader = DataLoader(train_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = False)
     test_loader = DataLoader(test_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = True)
+    if EVALUATION == False:
+        for epoch in range(NUM_EPOCHS):
+            pred_boxes, target_boxes = get_bboxes(train_loader, yolov1, iou_threshold = 0.5, prob_threshold= 0.4)
 
-    for epoch in range(NUM_EPOCHS):
-        pred_boxes, target_boxes = get_bboxes(train_loader, yolov1, iou_threshold = 0.5, prob_threshold= 0.4)
-        # print("pred: ",pred_boxes)
-        # print("target: ",target_boxes)
-        mean_avg_pre = MAP(pred_boxes,target_boxes, iou_threshold=0.5, format="midpoints")
-        print(f"Train mAP: {mean_avg_pre}")
-        train(train_loader,yolov1, optimizer, loss,scaler)
+            mean_avg_pre = MAP(pred_boxes,target_boxes, iou_threshold=0.5, format="midpoints")
+            print(f"Train mAP: {mean_avg_pre}")
+            if mean_avg_pre > 0.94:
+               checkpoint = {
+                   "state_dict": yolov1.state_dict(),
+                   "optimizer": optimizer.state_dict(),
+               }
+               save_checkpoint(checkpoint, filename=LOAD_MODEL_FILE)
+               import time
+               time.sleep(10)
+
+            train(train_loader,yolov1, optimizer, loss,scaler)
+
+    else: evaluation(test_loader,yolov1,optimizer,LOAD_MODEL_FILE)
 
 main()
 
