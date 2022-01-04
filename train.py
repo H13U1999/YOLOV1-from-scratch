@@ -110,12 +110,18 @@ def main():
                           IMG_DIR,
                           LABEL_DIR,
                           transform=transform)
+    train_evaluation = PascalVOC("/home/hieu/Documents/Pascal VOC/100examples.csv",
+                         IMG_DIR,
+                         LABEL_DIR,
+                         transform=transform)
 
     train_loader = DataLoader(train_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = False)
     test_loader = DataLoader(test_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = True)
+    dev_loader = DataLoader(train_evaluation, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = True)
+
     if EVALUATION == False:
         for epoch in range(NUM_EPOCHS):
-            pred_boxes, target_boxes = get_bboxes(train_loader, yolov1, iou_threshold = 0.5, prob_threshold= 0.4)
+            pred_boxes, target_boxes = get_bboxes(dev_loader, yolov1, iou_threshold = 0.5, prob_threshold= 0.4)
 
             mean_avg_pre = MAP(pred_boxes,target_boxes, iou_threshold=0.5, format="midpoints")
             print(f"Train mAP: {mean_avg_pre}")
