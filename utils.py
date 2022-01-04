@@ -74,15 +74,16 @@ def MAP(pred_boxes, true_boxes, iou_threshold=0.5, format="corners", num_classes
 
         amount_bbs = Counter([gt[0] for gt in ground_truths])  # img 0 has 3 bb, img 1 has 5 bb =>amount_bbs = {0:3,1:5}
         for key, val in amount_bbs.items():
-            amount_bbs[key] = torch.tensor(val)  # amount_bbs = {0:torch.tensor([0,0,0]), 1:torch.tensor([0,0,0,0,0])}
+            amount_bbs[key] = torch.zeros(val)  # amount_bbs = {0:torch.tensor([0,0,0]), 1:torch.tensor([0,0,0,0,0])}
+
         detections.sort(key=lambda x: x[2], reverse=True)
         TP = torch.zeros(len(detections))
         FP = torch.zeros(len(detections))
         total_true_bb = len(ground_truths)
 
-        best_iou = 0
-        best_gts_idx = 0
         for idx, detection in enumerate(detections):
+            best_iou = 0
+            best_gts_idx = 0
             ground_truth_img = [bbs for bbs in ground_truths if bbs[0] == detection[0]]  # take bbs with pred in same img
             num_gts = len(ground_truth_img)
             for ii, gt in enumerate(ground_truth_img):
@@ -148,10 +149,6 @@ def get_bboxes(
                 format=format,
             )
 
-
-            #if batch_idx == 0 and idx == 0:
-            #    plot_image(x[idx].permute(1,2,0).to("cpu"), nms_boxes)
-            #    print(nms_boxes)
 
             for nms_box in nms_boxes:
                 all_pred_boxes.append([train_idx] + nms_box)

@@ -15,12 +15,10 @@ seed = 123
 
 torch.manual_seed(seed)
 LEARNING_RATE = 2e-5
-DEVICE ="cuda" if torch.cuda.is_available() else "cpu"
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 16
 NUM_EPOCHS = 100
 NUM_WORKERS = 2
-IMAGE_WIDTH = 160
-IMAGE_HEIGHT = 240
 PIN_MEMORY = True
 LOAD_MODEL = False
 LOAD_MODEL_FILE = "overfit.pth.tar"
@@ -42,24 +40,28 @@ class Compose(object):
 
 transform = Compose([transforms.Resize((448,448)), transforms.ToTensor()])
 
-def train(train_loader, model, optimizer, loss, scaler):
-    loop = tqdm(train_loader, leave =True)
+
+
+
+def train(train_loader, model, optimizer, loss_fn, scaler):
     running_loss = []
-    for idx, (x,y) in enumerate(loop):
-        x,y = x.to(DEVICE), y.to(DEVICE)
+    loop = tqdm(enumerate(train_loader), total=len(train_loader))
+    for idx, (x, y) in loop:
+        x = x.to(DEVICE)
+        y = y.to(DEVICE)
 
         with torch.cuda.amp.autocast():
-            pred = model(x)
-            loss = loss(pred,y)
+            preds = model(x)
+            loss = loss_fn(preds, y)
 
         running_loss.append(loss.item())
         optimizer.zero_grad()
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
-
         loop.set_postfix(loss=loss.item())
-    print(f"mean loss {sum(running_loss)/len(running_loss)}")
+
+    print(f"mean loss {sum(running_loss) / len(running_loss)}")
 
 def main():
     architecture_configs = [
@@ -91,7 +93,7 @@ def main():
     if LOAD_MODEL:
         load_checkpoint(torch.load(LOAD_MODEL_FILE), yolov1,optimizer)
 
-    train_set = PascalVOC("/home/hieu/Documents/Pascal VOC/8examples.csv",
+    train_set = PascalVOC("/home/hieu/Documents/Pascal VOC/100examples.csv",
                           "/home/hieu/Documents/Pascal VOC/images",
                           "/home/hieu/Documents/Pascal VOC/labels",
                           transform = transform)
@@ -100,11 +102,14 @@ def main():
                           "/home/hieu/Documents/Pascal VOC/images",
                           "/home/hieu/Documents/Pascal VOC/labels",
                           transform=transform)
+
     train_loader = DataLoader(train_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = False)
     test_loader = DataLoader(test_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = True)
 
     for epoch in range(NUM_EPOCHS):
         pred_boxes, target_boxes = get_bboxes(train_loader, yolov1, iou_threshold = 0.5, prob_threshold= 0.4)
+        # print("pred: ",pred_boxes)
+        # print("target: ",target_boxes)
         mean_avg_pre = MAP(pred_boxes,target_boxes, iou_threshold=0.5, format="midpoints")
         print(f"Train mAP: {mean_avg_pre}")
         train(train_loader,yolov1, optimizer, loss,scaler)
