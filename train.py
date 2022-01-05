@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from model import YOLOV1
 from dataset import PascalVOC
-from utils import get_bboxes, IOU, NMS, MAP, cellboxes_to_boxes, convert_cellboxes, load_checkpoint, save_checkpoint
+from utils import get_bboxes, IOU, NMS, MAP, cellboxes_to_boxes, convert_cellboxes, load_checkpoint, save_checkpoint, plot_some_images
 from loss import Loss
 from torch.utils.data import Dataset, DataLoader
 
@@ -66,9 +66,10 @@ def train(train_loader, model, optimizer, loss_fn, scaler):
 
 def evaluation(test_loader, model, optimizer, file):
     load_checkpoint(torch.load(file), model,optimizer)
-    pred_boxes, target_boxes = get_bboxes(test_loader, model, iou_threshold=0.5, prob_threshold=0.4)
+    pred_boxes, target_boxes = get_bboxes(test_loader, model, iou_threshold=0.5, prob_threshold=0.4,eva=True)
     mean_avg_pre = MAP(pred_boxes, target_boxes, iou_threshold=0.5, format="midpoints")
     print(f"Evaluation mAP: {mean_avg_pre}")
+    plot_some_images(8,model,test_loader, iou_threshold=0.5, prob_threshold=0.4)
 
 
 def main():
@@ -106,17 +107,18 @@ def main():
                           LABEL_DIR,
                           transform = transform)
 
-    test_set = PascalVOC("/home/hieu/Documents/Pascal VOC/test.csv",
+    test_set = PascalVOC("/home/hieu/Documents/Pascal VOC/8examples.csv",
                           IMG_DIR,
                           LABEL_DIR,
                           transform=transform)
-    train_evaluation = PascalVOC("/home/hieu/Documents/Pascal VOC/100examples.csv",
-                         IMG_DIR,
+
+    train_evaluation = PascalVOC("/home/hieu/Documents/8examples.csv",
+                         "/home/hieu/Documents/test",
                          LABEL_DIR,
                          transform=transform)
 
     train_loader = DataLoader(train_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = False)
-    test_loader = DataLoader(test_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = True)
+    test_loader = DataLoader(test_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = False)
     dev_loader = DataLoader(train_evaluation, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = True)
 
     if EVALUATION == False:
@@ -136,7 +138,7 @@ def main():
 
             train(train_loader,yolov1, optimizer, loss,scaler)
 
-    else: evaluation(test_loader,yolov1,optimizer,LOAD_MODEL_FILE)
+    else: evaluation(train_loader,yolov1,optimizer,LOAD_MODEL_FILE)
 
 main()
 

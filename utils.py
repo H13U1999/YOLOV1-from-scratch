@@ -112,7 +112,70 @@ def MAP(pred_boxes, true_boxes, iou_threshold=0.5, format="corners", num_classes
 
 
 
+def plot_image(image, boxes):
 
+    class_label = [
+        'aeroplane',
+        'bicycle',
+        'bird',
+        'boat',
+        'bottle',
+        'bus',
+        'car',
+        'cat',
+        'chair',
+        'cow',
+        'diningtable',
+        'dog',
+        'horse',
+        'motorbike',
+        'person',
+        'pottedplant',
+        'sheep',
+        'sofa',
+        'train',
+        'tvmonitor',
+    ]
+    cmap = plt.get_cmap("tab20b")
+    colors = [cmap(i) for i in np.linspace(0, 1, len(class_label))]
+    print(boxes)
+    im = np.array(image)
+    height, width, _ = im.shape
+
+    # Create figure and axes
+    fig, ax = plt.subplots(1)
+    # Display the image
+    ax.imshow(im)
+    # box[0] is x midpoint, box[2] is width
+    # box[1] is y midpoint, box[3] is height
+
+    # Create a Rectangle potch
+    for box in boxes:
+        assert len(box) == 6, "box should contain class pred, confidence, x, y, width, height"
+        predicted_class = int(box[0])
+        box = box[2:]
+        upper_left_x = box[0] - box[2] / 2
+        upper_left_y = box[1] - box[3] / 2
+        rect = patches.Rectangle(
+            (upper_left_x * width, upper_left_y * height),
+            box[2] * width,
+            box[3] * height,
+            linewidth=2,
+            edgecolor = colors[predicted_class],
+            facecolor = "none",
+        )
+        # Add the patch to the Axes
+        ax.add_patch(rect)
+        plt.text(
+            upper_left_x * width,
+            upper_left_y * height,
+            s=class_label[int(predicted_class)],
+            color="white",
+            verticalalignment="top",
+            bbox={"color": colors[int(predicted_class)], "pad": 0},
+        )
+
+    plt.show()
 
 def get_bboxes(
     loader,
@@ -126,28 +189,7 @@ def get_bboxes(
 ):
     all_pred_boxes = []
     all_true_boxes = []
-    class_dict = {
-    1: 'aeroplane',
-    2: 'bicycle',
-    3: 'bird',
-    4: 'boat',
-    5: 'bottle',
-    6: 'bus',
-    7: 'car',
-    8: 'cat',
-    9: 'chair',
-    10: 'cow',
-    11: 'diningtable',
-    12: 'dog',
-    13: 'horse',
-    14: 'motorbike',
-    15: 'person',
-    16: 'pottedplant',
-    17: 'sheep',
-    18: 'sofa',
-    19: 'train',
-    20: 'tvmonitor',
-    }
+
 
     # make sure model is in eval before get bboxes
     model.eval()
@@ -156,7 +198,6 @@ def get_bboxes(
     for batch_idx, (x, labels) in enumerate(loader):
         x = x.to(device)
         labels = labels.to(device)
-
         with torch.no_grad():
             predictions = model(x)
 
@@ -172,7 +213,6 @@ def get_bboxes(
                 format=format,
             )
 
-
             for nms_box in nms_boxes:
                 all_pred_boxes.append([train_idx] + nms_box)
 
@@ -185,6 +225,16 @@ def get_bboxes(
 
     model.train()
     return all_pred_boxes, all_true_boxes
+
+
+def plot_some_images(number_of_images, model, loader, iou_threshold, prob_threshold):
+    model.eval()
+    for x, y in loader:
+     x = x.to("cuda")
+     for idx in range(number_of_images):
+       bboxes = cellboxes_to_boxes(model(x))
+       bboxes = NMS(bboxes[idx], iou_threshold=0.5, prob_threshold=0.4, format="midpoints")
+       plot_image(x[idx].permute(1,2,0).to("cpu"), bboxes)
 
 
 
