@@ -12,7 +12,6 @@ from loss import Loss
 from torch.utils.data import Dataset, DataLoader
 
 seed = 123
-
 torch.manual_seed(seed)
 LEARNING_RATE = 2e-5
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -22,11 +21,12 @@ NUM_WORKERS = 2
 PIN_MEMORY = True
 LOAD_MODEL = False
 LOAD_MODEL_FILE = "yolov1.pth.tar"
-EVALUATION = True
+EVALUATION = False
 NUM_CLASS = 20
 NUM_BOXES = 2
 NUM_GRIDS = 7
-WEIGHT_DECAY = 0
+WEIGHT_DECAY = 0.0005
+MOMENTUM = 0.9
 IMG_DIR = "/home/hieu/Documents/Pascal VOC/images"
 LABEL_DIR = "/home/hieu/Documents/Pascal VOC/labels"
 
@@ -56,7 +56,10 @@ def train(train_loader, model, optimizer, loss_fn, scaler):
             loss = loss_fn(preds, y)
 
         running_loss.append(loss.item())
-        optimizer.zero_grad()
+
+        for param in model.parameters():
+            param.grad = None
+
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
@@ -95,7 +98,7 @@ def main():
     ]
 
     yolov1 = YOLOV1(grids = NUM_GRIDS, num_boxes= NUM_BOXES, num_classes=NUM_CLASS, architecture_config= architecture_configs).to(DEVICE)
-    optimizer = optim.Adam(yolov1.parameters(), lr=LEARNING_RATE)
+    optimizer = optim.Adam(yolov1.parameters(), lr=LEARNING_RATE, weight_decay = WEIGHT_DECAY)
     scaler = torch.cuda.amp.GradScaler()
     loss = Loss()
 
@@ -112,29 +115,32 @@ def main():
                           LABEL_DIR,
                           transform=transform)
 
-    train_evaluation = PascalVOC("/home/hieu/Documents/8examples.csv",
-                         "/home/hieu/Documents/test",
+    train_evaluation = PascalVOC("/home/hieu/Documents/Pascal VOC/100examples.csv",
+                         IMG_DIR,
                          LABEL_DIR,
                          transform=transform)
 
-    train_loader = DataLoader(train_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = False)
+    train_loader = DataLoader(train_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = True)
     test_loader = DataLoader(test_set, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = False)
     dev_loader = DataLoader(train_evaluation, batch_size = BATCH_SIZE, num_workers = NUM_WORKERS, pin_memory = PIN_MEMORY, shuffle = True, drop_last = True)
 
     if EVALUATION == False:
+        torch.backends.cudnn.bechmark = True
+        mAP = 0.94
         for epoch in range(NUM_EPOCHS):
             pred_boxes, target_boxes = get_bboxes(dev_loader, yolov1, iou_threshold = 0.5, prob_threshold= 0.4)
 
             mean_avg_pre = MAP(pred_boxes,target_boxes, iou_threshold=0.5, format="midpoints")
             print(f"Train mAP: {mean_avg_pre}")
-            if mean_avg_pre > 0.94:
+            if mean_avg_pre >= mAP:
                checkpoint = {
                    "state_dict": yolov1.state_dict(),
                    "optimizer": optimizer.state_dict(),
                }
                save_checkpoint(checkpoint, filename=LOAD_MODEL_FILE)
                import time
-               time.sleep(10)
+               time.sleep(5)
+               mAP = mean_avg_pre
 
             train(train_loader,yolov1, optimizer, loss,scaler)
 

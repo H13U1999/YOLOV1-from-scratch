@@ -236,6 +236,8 @@ def plot_some_images(number_of_images, model, loader, iou_threshold, prob_thresh
        bboxes = NMS(bboxes[idx], iou_threshold=0.5, prob_threshold=0.4, format="midpoints")
        plot_image(x[idx].permute(1,2,0).to("cpu"), bboxes)
 
+    model.train()
+
 
 
 def convert_cellboxes(predictions, grids=7):
