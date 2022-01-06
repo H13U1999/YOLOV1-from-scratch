@@ -25,7 +25,7 @@ EVALUATION = False
 NUM_CLASS = 20
 NUM_BOXES = 2
 NUM_GRIDS = 7
-WEIGHT_DECAY = 0.0005
+WEIGHT_DECAY = 1e-4
 MOMENTUM = 0.9
 IMG_DIR = "/home/hieu/Documents/Pascal VOC/images"
 LABEL_DIR = "/home/hieu/Documents/Pascal VOC/labels"
@@ -39,9 +39,18 @@ class Compose(object):
             img, boxes = t(img),boxes
         return img,boxes
 
-transform = Compose([transforms.Resize((448,448)), transforms.ToTensor()])
+transform = Compose([
+    # transforms.ToPILImage(),
+    transforms.Resize((448,448)),
+    # transforms.RandomCrop((224,224)),
+    # transforms.RandomRotation(degrees=(30,30)),
+    # transforms.Resize((448,448)),
+    # transforms.RandomHorizontalFlip(p=0.5),
+    # transforms.RandomGrayscale(p=0.2),
+    transforms.ToTensor()])
 
-
+eval_transforms = Compose([transforms.Resize((448,448)),
+                               transforms.ToTensor()])
 
 
 def train(train_loader, model, optimizer, loss_fn, scaler):
@@ -113,7 +122,7 @@ def main():
     test_set = PascalVOC("/home/hieu/Documents/Pascal VOC/8examples.csv",
                           IMG_DIR,
                           LABEL_DIR,
-                          transform=transform)
+                          transform=eval_transforms)
 
     train_evaluation = PascalVOC("/home/hieu/Documents/Pascal VOC/100examples.csv",
                          IMG_DIR,
